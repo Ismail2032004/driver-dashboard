@@ -1,0 +1,17 @@
+{
+  "name": "driver-behavior-backend",
+  "version": "1.0.0",
+  "description": "Driver behavior monitoring system backend",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "mock": "node scripts/mockPublisher.js"
+  },
+  "dependencies": {
+    "@influxdata/influxdb-client": "^1.33.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "mqtt": "^5.7.3"
+  }
+}
