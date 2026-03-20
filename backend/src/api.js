@@ -1,9 +1,31 @@
 const express = require('express');
 const cors    = require('cors');
+const fs      = require('fs');
+const path    = require('path');
 const db      = require('./db');
 const { getDriverIds, getDriverTelemetry, getDriverStats } = require('./influxQuery');
 
 const router = express.Router();
+
+// ── POST /api/auth/login ──────────────────────────────────────────────────────
+router.post('/auth/login', (req, res) => {
+  const { username, password } = req.body ?? {};
+  if (!username || !password) {
+    return res.status(400).json({ success: false, message: 'Username and password required' });
+  }
+  try {
+    const usersPath = path.join(__dirname, '../data/users.json');
+    const users = JSON.parse(fs.readFileSync(usersPath, 'utf8'));
+    const user = users.find(u => u.username === username && u.password === password);
+    if (user) {
+      return res.json({ success: true, driver_id: user.driver_id, name: user.name });
+    }
+    return res.status(401).json({ success: false, message: 'Invalid credentials' });
+  } catch (err) {
+    console.error('[API] POST /auth/login error:', err.message);
+    return res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
 
 // ── GET /api/drivers ──────────────────────────────────────────────────────────
 router.get('/drivers', async (_req, res) => {
