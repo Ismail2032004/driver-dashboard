@@ -16,7 +16,7 @@ const path = require('path');
 
 // ── Storage setup ─────────────────────────────────────────────────────────────
 
-const DATA_DIR   = path.join(__dirname, '..', 'data');
+const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '../data');
 const TRIPS_FILE = path.join(DATA_DIR, 'trips.json');
 
 fs.mkdirSync(DATA_DIR, { recursive: true });
