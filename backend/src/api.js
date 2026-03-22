@@ -2,6 +2,7 @@ const express = require('express');
 const cors    = require('cors');
 const db      = require('./db');
 const { getDriverIds, getDriverTelemetry, getDriverStats } = require('./influxQuery');
+const { writeDriverData } = require('./influxWriter');
 
 const router = express.Router();
 
@@ -97,6 +98,38 @@ router.get('/drivers/:id/trips/:tripId/route', (req, res) => {
      FROM datapoints WHERE trip_id = ? ORDER BY id ASC`
   ).all(req.params.tripId);
   res.json({ points });
+});
+
+// POST /api/drivers/:id/sync  — bulk upload of offline-buffered points
+router.post('/drivers/:id/sync', (req, res) => {
+  const driverId = req.params.id;
+  const { points } = req.body ?? {};
+
+  if (!Array.isArray(points) || points.length === 0) {
+    return res.json({ success: true, count: 0 });
+  }
+
+  const tripManager = req.app.locals.tripManager;
+  let count = 0;
+
+  for (const point of points) {
+    try {
+      // Normalise timestamp: accept ISO string or epoch seconds
+      let ts = point.timestamp;
+      if (typeof ts === 'string') {
+        ts = new Date(ts).getTime() / 1000; // ISO → epoch seconds
+      }
+      const enriched = { ...point, driver_id: driverId, timestamp: ts };
+      writeDriverData(enriched);
+      tripManager.handleMessage(enriched);
+      count++;
+    } catch (err) {
+      console.error('[sync] Failed to write point:', err.message);
+    }
+  }
+
+  console.log(`[sync] Wrote ${count}/${points.length} points for ${driverId}`);
+  res.json({ success: true, count });
 });
 
 // GET /api/drivers/:id/trips/:tripId/csv
