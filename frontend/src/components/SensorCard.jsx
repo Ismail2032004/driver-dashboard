@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 
 const INSTRUMENTS = [
+  { key: 'label',      label: 'LABEL',       unit: '',      fmt: v => v === 1 ? 'AGGRESSIVE' : 'NORMAL', color: '#ffffff', wide: true  },
   { key: 'speed',      label: 'SPEED',       unit: 'km/h',  fmt: v => v.toFixed(1),                    color: '#38bdf8', wide: true  },
   { key: 'rpm',        label: 'RPM',         unit: 'rpm',   fmt: v => Math.round(v).toLocaleString(),  color: '#a78bfa', wide: true  },
   { key: 'throttle',   label: 'THROTTLE',    unit: '%',     fmt: v => v.toFixed(1),                    color: '#4f6ef7', wide: false },
@@ -35,9 +36,14 @@ export default function LiveReadings({ latest }) {
 }
 
 function Gauge({ inst, latest }) {
-  const { key, label, unit, fmt, color } = inst;
+  const { key, label, unit, fmt } = inst;
   const raw     = latest?.[key];
   const display = raw !== undefined && raw !== null ? fmt(raw) : '—';
+
+  // Dynamic color for the label instrument; static for all others
+  const color = key === 'label'
+    ? (raw === 1 ? '#f87171' : '#22c55e')
+    : inst.color;
 
   const prevRef  = useRef(display);
   const [flash, setFlash] = useState(false);
@@ -52,7 +58,11 @@ function Gauge({ inst, latest }) {
   }, [display]);
 
   return (
-    <div style={{ ...s.gauge, borderColor: flash ? color + '66' : '#2a2d3e' }}>
+    <div style={{
+      ...s.gauge,
+      borderColor: flash ? color + '66' : '#2a2d3e',
+      ...(key === 'label' ? { gridColumn: 'span 2' } : {}),
+    }}>
       {/* top accent bar */}
       <div style={{ ...s.accentBar, background: color }} />
 
@@ -60,6 +70,7 @@ function Gauge({ inst, latest }) {
 
       <span style={{
         ...s.gaugeValue,
+        fontSize:   key === 'label' ? '18px' : s.gaugeValue.fontSize,
         color:      flash ? '#ffffff' : color,
         textShadow: flash ? `0 0 16px ${color}` : `0 0 4px ${color}44`,
         transition: flash ? 'none' : 'color 0.4s, text-shadow 0.4s',
