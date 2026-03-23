@@ -16,6 +16,22 @@ mqttClient.on('message', (topic, payload) => {
   console.log(`[MQTT] topic=${topic} payload=${payload.toString()}`);
   try {
     const data = JSON.parse(payload.toString());
+
+    // ── Trip control events: drivers/{id}/trip ────────────────────────────
+    if (topic.endsWith('/trip')) {
+      const driver_id = data.driver_id || topic.split('/')[1];
+      if (!driver_id) return;
+      if (data.event === 'trip_start') {
+        tripManager.handleTripStart(driver_id);
+      } else if (data.event === 'trip_end') {
+        tripManager.handleTripEnd(driver_id);
+      } else {
+        console.warn(`[MQTT] Unknown trip event '${data.event}' for ${driver_id}`);
+      }
+      return;
+    }
+
+    // ── Telemetry: drivers/{id}/telemetry ─────────────────────────────────
     if (data.driver_id) {
       latestByDriver[data.driver_id] = data;
       tripManager.handleMessage(data);

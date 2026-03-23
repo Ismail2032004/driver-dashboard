@@ -15,11 +15,13 @@ function startMqttSubscriber() {
   client.on('connect', () => {
     console.log(`[MQTT] Connected to ${MQTT_HOST}`);
     client.subscribe(MQTT_TOPIC, { qos: 1 }, (err) => {
-      if (err) {
-        console.error('[MQTT] Subscribe error:', err.message);
-      } else {
-        console.log(`[MQTT] Subscribed to topic: ${MQTT_TOPIC}`);
-      }
+      if (err) console.error('[MQTT] Subscribe error:', err.message);
+      else      console.log(`[MQTT] Subscribed to topic: ${MQTT_TOPIC}`);
+    });
+    // Also subscribe to trip control events from the ESP32
+    client.subscribe('drivers/+/trip', { qos: 1 }, (err) => {
+      if (err) console.error('[MQTT] Subscribe error (trip):', err.message);
+      else      console.log('[MQTT] Subscribed to topic: drivers/+/trip');
     });
   });
 
@@ -32,7 +34,10 @@ function startMqttSubscriber() {
       return;
     }
 
-    // Validate required fields before writing
+    // Trip-event messages are handled by index.js — skip InfluxDB write for them
+    if (topic.endsWith('/trip')) return;
+
+    // Validate required telemetry fields before writing to InfluxDB
     const required = ['driver_id', 'timestamp', 'label', 'confidence', 'speed', 'rpm', 'throttle', 'long_acc', 'lat_acc', 'yaw_rate'];
     const missing = required.filter((k) => data[k] === undefined);
     if (missing.length > 0) {

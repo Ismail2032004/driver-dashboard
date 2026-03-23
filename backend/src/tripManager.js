@@ -117,4 +117,27 @@ function startCleanupTimer() {
   }, 60 * 1000);
 }
 
-module.exports = { handleMessage, startCleanupTimer, getActiveTrip };
+// ── Explicit trip control (ESP32 trip events) ─────────────────────────────────
+
+function handleTripStart(driver_id) {
+  if (activeTripsByDriver[driver_id]) {
+    console.log(`[TripManager] trip_start ignored — trip already active for ${driver_id}`);
+    return;
+  }
+  const tripId = randomUUID();
+  const ts = new Date().toISOString();
+  stmtInsertTrip.run(tripId, driver_id, ts, null, null);
+  activeTripsByDriver[driver_id] = { tripId, lastSeen: Date.now() };
+  console.log(`[TripManager] trip_start: opened trip ${tripId} for ${driver_id}`);
+}
+
+function handleTripEnd(driver_id) {
+  if (!activeTripsByDriver[driver_id]) {
+    console.log(`[TripManager] trip_end ignored — no active trip for ${driver_id}`);
+    return;
+  }
+  console.log(`[TripManager] trip_end: closing trip for ${driver_id}`);
+  closeTrip(driver_id);
+}
+
+module.exports = { handleMessage, handleTripStart, handleTripEnd, startCleanupTimer, getActiveTrip };

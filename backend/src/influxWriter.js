@@ -11,7 +11,7 @@ function writeDriverData(data) {
     .intField('label', data.label)
     .floatField('confidence', data.confidence)
     .floatField('speed', data.speed)
-    .floatField('rpm', data.rpm)
+    .intField('rpm', Math.round(data.rpm || 0))
     .floatField('throttle', data.throttle)
     .floatField('long_acc', data.long_acc)
     .floatField('lat_acc', data.lat_acc)
