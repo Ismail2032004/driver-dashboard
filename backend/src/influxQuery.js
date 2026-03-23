@@ -144,4 +144,35 @@ function normaliseRow(row) {
   return clean;
 }
 
-module.exports = { getDriverIds, getDriverTelemetry, getDriverStats, getDriverLatest };
+/**
+ * Return the last 20 aggressive moments for a driver in the past hour,
+ * ordered newest first.
+ */
+async function getDriverAlerts(driverId) {
+  const flux = `
+    from(bucket: "${BUCKET}")
+      |> range(start: -1h)
+      |> filter(fn: (r) => r._measurement == "driver_telemetry" and r.driver_id == "${driverId}")
+      |> filter(fn: (r) => r._field == "speed" or r._field == "rpm"
+            or r._field == "confidence" or r._field == "label"
+            or r._field == "lat" or r._field == "lon")
+      |> pivot(rowKey: ["_time"], columnKey: ["_field"], valueColumn: "_value")
+      |> filter(fn: (r) => r.label == 1)
+      |> sort(columns: ["_time"], desc: true)
+      |> limit(n: 20)
+  `;
+  const rows = await runQuery(flux);
+  return rows.map(r => {
+    const clean = normaliseRow(r);
+    return {
+      timestamp:  clean.timestamp,
+      speed:      clean.speed      ?? null,
+      rpm:        clean.rpm        ?? null,
+      confidence: clean.confidence ?? null,
+      lat:        clean.lat        ?? null,
+      lon:        clean.lon        ?? null,
+    };
+  });
+}
+
+module.exports = { getDriverIds, getDriverTelemetry, getDriverStats, getDriverLatest, getDriverAlerts };

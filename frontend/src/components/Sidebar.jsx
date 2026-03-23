@@ -1,4 +1,18 @@
+import { useEffect } from 'react';
 import { usePolling } from '../hooks/useApi.js';
+
+// Inject the pulse keyframe once at module load
+if (typeof document !== 'undefined' && !document.getElementById('_sidebar_pulse')) {
+  const s = document.createElement('style');
+  s.id = '_sidebar_pulse';
+  s.textContent = `
+    @keyframes _pulse_dot {
+      0%, 100% { transform: scale(1);    opacity: 1;   }
+      50%       { transform: scale(1.35); opacity: 0.7; }
+    }
+  `;
+  document.head.appendChild(s);
+}
 
 export default function Sidebar({ selected, onSelect }) {
   const { data, loading, error } = usePolling('/api/drivers', 10000);
@@ -40,6 +54,9 @@ function DriverRow({ id, selected, onClick }) {
   const initials = id.replace(/[^a-z0-9]/gi, '').slice(0, 2).toUpperCase();
   const color = stringToColor(id);
 
+  const { data: latest } = usePolling(`/api/drivers/${id}/latest`, 5000);
+  const isAggressive = latest?.label === 1;
+
   return (
     <button
       style={{
@@ -56,6 +73,21 @@ function DriverRow({ id, selected, onClick }) {
         <span style={styles.driverId}>{formatDriverId(id)}</span>
         <span style={styles.driverSub}>{id}</span>
       </div>
+
+      {/* Status dot */}
+      <div
+        title={isAggressive ? 'Currently aggressive' : 'Normal driving'}
+        style={{
+          width: '8px',
+          height: '8px',
+          minWidth: '8px',
+          borderRadius: '50%',
+          background: isAggressive ? '#ef4444' : '#22c55e',
+          boxShadow: isAggressive ? '0 0 5px #ef444488' : '0 0 5px #22c55e66',
+          animation: isAggressive ? '_pulse_dot 1.2s ease-in-out infinite' : 'none',
+        }}
+      />
+
       {selected && <div style={styles.activeDot} />}
     </button>
   );

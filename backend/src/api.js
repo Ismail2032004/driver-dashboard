@@ -1,7 +1,7 @@
 const express = require('express');
 const cors    = require('cors');
 const db      = require('./db');
-const { getDriverIds, getDriverTelemetry, getDriverStats } = require('./influxQuery');
+const { getDriverIds, getDriverTelemetry, getDriverStats, getDriverAlerts } = require('./influxQuery');
 const { writeDriverData } = require('./influxWriter');
 
 const router = express.Router();
@@ -60,6 +60,18 @@ router.get('/drivers/:id/stats', async (req, res) => {
   } catch (err) {
     console.error(`[API] GET /drivers/${id}/stats error:`, err.message, err.body ?? '');
     res.status(500).json({ error: 'Failed to fetch stats' });
+  }
+});
+
+// ── GET /api/drivers/:id/alerts ───────────────────────────────────────────────
+router.get('/drivers/:id/alerts', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const alerts = await getDriverAlerts(id);
+    res.json({ driver_id: id, alerts });
+  } catch (err) {
+    console.error(`[API] GET /drivers/${id}/alerts error:`, err.message, err.body ?? '');
+    res.status(500).json({ error: 'Failed to fetch alerts' });
   }
 });
 

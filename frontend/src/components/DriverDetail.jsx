@@ -140,6 +140,9 @@ export default function DriverDetail({ driverId }) {
       {/* ── Live readings ── */}
       <LiveReadings latest={latestPoint} />
 
+      {/* ── Recent alerts ── */}
+      <AlertsPanel driverId={driverId} />
+
       {/* ── Trips ── */}
       <div style={styles.tripsSection}>
         <TripList
@@ -215,6 +218,56 @@ function LabelTooltip({ active, payload, label }) {
       <div style={tooltip.time}>{label}</div>
       <div style={{ ...tooltip.val, color: val === 1 ? '#ef4444' : '#22c55e' }}>
         {val === 1 ? 'Aggressive' : val === 0 ? 'Normal' : '—'}
+      </div>
+    </div>
+  );
+}
+
+function AlertsPanel({ driverId }) {
+  const { data, loading } = usePolling(`/api/drivers/${driverId}/alerts`, 10000);
+  const alerts = data?.alerts ?? [];
+
+  return (
+    <div style={alertStyles.panel}>
+      <div style={alertStyles.header}>
+        <span style={alertStyles.bellIcon}>🔔</span>
+        <span style={alertStyles.title}>Recent Alerts</span>
+        <span style={alertStyles.sub}>last hour</span>
+      </div>
+
+      <div style={alertStyles.list}>
+        {loading && alerts.length === 0 ? (
+          <div style={alertStyles.empty}>Loading…</div>
+        ) : alerts.length === 0 ? (
+          <div style={alertStyles.empty}>No alerts in the last hour</div>
+        ) : (
+          alerts.map((a, i) => (
+            <AlertItem key={i} alert={a} />
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
+function AlertItem({ alert }) {
+  const time = alert.timestamp
+    ? new Date(alert.timestamp).toLocaleTimeString([], {
+        hour: 'numeric', minute: '2-digit', hour12: true,
+      })
+    : '—';
+  const speed = alert.speed != null ? `${alert.speed.toFixed(0)} km/h` : '— km/h';
+  const conf  = alert.confidence != null
+    ? `${(alert.confidence * 100).toFixed(0)}% confidence`
+    : '';
+
+  return (
+    <div style={alertStyles.item}>
+      <span style={alertStyles.warnIcon}>⚠️</span>
+      <div style={alertStyles.itemContent}>
+        <span style={alertStyles.itemTime}>{time}</span>
+        <span style={alertStyles.itemSpeed}>{speed}</span>
+        {conf && <span style={alertStyles.itemConf}>{conf}</span>}
       </div>
     </div>
   );
@@ -388,3 +441,80 @@ const tooltip = {
 
 const chartMargin = { top: 4, right: 8, left: 0, bottom: 0 };
 const tickStyle   = { fill: '#555a72', fontSize: 11 };
+
+const alertStyles = {
+  panel: {
+    background: '#1a1d2e',
+    border: '1px solid #2a2d3e',
+    borderRadius: '12px',
+    padding: '16px 20px',
+  },
+  header: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    marginBottom: '12px',
+  },
+  bellIcon: {
+    fontSize: '15px',
+    lineHeight: 1,
+  },
+  title: {
+    fontSize: '13px',
+    fontWeight: '600',
+    color: '#e8eaf0',
+  },
+  sub: {
+    fontSize: '11px',
+    color: '#555a72',
+    marginLeft: '2px',
+  },
+  list: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '6px',
+    maxHeight: '280px',
+    overflowY: 'auto',
+  },
+  empty: {
+    fontSize: '13px',
+    color: '#555a72',
+    padding: '8px 0',
+  },
+  item: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
+    background: '#13151f',
+    border: '1px solid #2a2d3e',
+    borderLeft: '3px solid #ef4444',
+    borderRadius: '7px',
+    padding: '8px 12px',
+  },
+  warnIcon: {
+    fontSize: '14px',
+    lineHeight: 1,
+    flexShrink: 0,
+  },
+  itemContent: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+    flexWrap: 'wrap',
+  },
+  itemTime: {
+    fontSize: '12px',
+    fontWeight: '600',
+    color: '#e8eaf0',
+    minWidth: '70px',
+  },
+  itemSpeed: {
+    fontSize: '12px',
+    color: '#ef4444',
+    fontWeight: '600',
+  },
+  itemConf: {
+    fontSize: '11px',
+    color: '#555a72',
+  },
+};
