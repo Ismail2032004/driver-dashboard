@@ -3,11 +3,11 @@ import { useState, useEffect, useRef } from 'react';
 const INSTRUMENTS = [
   { key: 'speed',      label: 'SPEED',       unit: 'km/h',  fmt: v => v.toFixed(1),                    color: '#38bdf8', wide: true  },
   { key: 'rpm',        label: 'RPM',         unit: 'rpm',   fmt: v => Math.round(v).toLocaleString(),  color: '#a78bfa', wide: true  },
-  { key: 'throttle',   label: 'THROTTLE',    unit: '%',     fmt: v => (v * 100).toFixed(1),            color: '#4f6ef7', wide: false },
+  { key: 'throttle',   label: 'THROTTLE',    unit: '%',     fmt: v => v.toFixed(1),                    color: '#4f6ef7', wide: false },
   { key: 'long_acc',   label: 'LONG ACC',    unit: 'm/s²',  fmt: v => v.toFixed(3),                    color: '#f87171', wide: false },
   { key: 'lat_acc',    label: 'LAT ACC',     unit: 'm/s²',  fmt: v => v.toFixed(3),                    color: '#fb923c', wide: false },
   { key: 'yaw_rate',   label: 'YAW RATE',    unit: 'rad/s', fmt: v => v.toFixed(4),                    color: '#f59e0b', wide: false },
-  { key: 'confidence', label: 'CONFIDENCE',  unit: '%',     fmt: v => (v * 100).toFixed(1),            color: '#34d399', wide: false },
+  { key: 'confidence', label: 'CONFIDENCE',  unit: '%',     fmt: v => v.toFixed(1),                    color: '#34d399', wide: false },
   { key: 'lat',        label: 'LAT',         unit: '°',     fmt: v => v.toFixed(4),                    color: '#2dd4bf', wide: false },
   { key: 'lon',        label: 'LON',         unit: '°',     fmt: v => v.toFixed(4),                    color: '#2dd4bf', wide: false },
 ];
