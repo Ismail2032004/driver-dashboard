@@ -33,7 +33,7 @@ mqttClient.on('message', (topic, payload) => {
 
     // ── Telemetry: drivers/{id}/telemetry ─────────────────────────────────
     if (data.driver_id) {
-      latestByDriver[data.driver_id] = data;
+      latestByDriver[data.driver_id] = { ...data, received_at: Date.now() };
       tripManager.handleMessage(data);
     }
   } catch (_) {

@@ -13,7 +13,28 @@ const INSTRUMENTS = [
   { key: 'lon',        label: 'LON',         unit: '°',     fmt: v => v.toFixed(4),                    color: '#2dd4bf', wide: false },
 ];
 
+// Rolling average over last N values
+function useRollingAvg(value, n = 10) {
+  const buf = useRef([]);
+  useEffect(() => {
+    if (value == null || isNaN(value) || value <= 0) return;
+    buf.current.push(value);
+    if (buf.current.length > n) buf.current.shift();
+  }, [value, n]);
+  if (buf.current.length === 0) return null;
+  return Math.round(buf.current.reduce((a, b) => a + b, 0) / buf.current.length);
+}
+
 export default function LiveReadings({ latest }) {
+  // MQTT latency: server receive time minus ESP32 timestamp (converted to ms)
+  const mqttRaw = latest?.received_at != null && latest?.timestamp != null
+    ? latest.received_at - (latest.timestamp * 1000)
+    : null;
+  const infRaw = latest?.inference_latency_ms ?? null;
+
+  const mqttAvg = useRollingAvg(mqttRaw);
+  const infAvg  = useRollingAvg(infRaw);
+
   return (
     <div style={s.card}>
       <style>{KEYFRAMES}</style>
@@ -22,9 +43,15 @@ export default function LiveReadings({ latest }) {
           <div style={s.pulse} />
           <span style={s.title}>Live Readings</span>
         </div>
-        {latest?.timestamp && (
-          <span style={s.ts}>{new Date(latest.timestamp).toLocaleTimeString()}</span>
-        )}
+        <div style={s.headerRight}>
+          {latest?.timestamp && (
+            <span style={s.ts}>
+              Updated {new Date(latest.timestamp * 1000).toLocaleTimeString()}
+            </span>
+          )}
+          <LatencyBadge label="MQTT" value={mqttAvg} color="#22c55e" />
+          <LatencyBadge label="INF"  value={infAvg}  color="#38bdf8" />
+        </div>
       </div>
       <div style={s.grid}>
         {INSTRUMENTS.map(inst => (
@@ -35,12 +62,30 @@ export default function LiveReadings({ latest }) {
   );
 }
 
+function LatencyBadge({ label, value, color }) {
+  const text = value != null ? `${label} ${value}ms` : `${label} --`;
+  return (
+    <div style={{
+      padding: '3px 9px',
+      borderRadius: '20px',
+      background: color + '18',
+      border: `1px solid ${color}44`,
+      fontSize: '11px',
+      fontWeight: '600',
+      color,
+      whiteSpace: 'nowrap',
+      fontVariantNumeric: 'tabular-nums',
+    }}>
+      {text}
+    </div>
+  );
+}
+
 function Gauge({ inst, latest }) {
   const { key, label, unit, fmt } = inst;
   const raw     = latest?.[key];
   const display = raw !== undefined && raw !== null ? fmt(raw) : '—';
 
-  // Dynamic color for the label instrument; static for all others
   const color = key === 'label'
     ? (raw === 1 ? '#f87171' : '#22c55e')
     : inst.color;
@@ -63,11 +108,8 @@ function Gauge({ inst, latest }) {
       borderColor: flash ? color + '66' : '#2a2d3e',
       ...(key === 'label' ? { gridColumn: 'span 2' } : {}),
     }}>
-      {/* top accent bar */}
       <div style={{ ...s.accentBar, background: color }} />
-
       <span style={s.gaugeLabel}>{label}</span>
-
       <span style={{
         ...s.gaugeValue,
         fontSize:   key === 'label' ? '18px' : s.gaugeValue.fontSize,
@@ -77,13 +119,17 @@ function Gauge({ inst, latest }) {
       }}>
         {display}
       </span>
-
       <span style={{ ...s.gaugeUnit, color: color + 'aa' }}>{unit}</span>
     </div>
   );
 }
 
-const KEYFRAMES = ``;
+const KEYFRAMES = `
+@keyframes livePulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.85); }
+}
+`;
 
 const s = {
   card: {
@@ -97,11 +143,19 @@ const s = {
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: '16px',
+    flexWrap: 'wrap',
+    gap: '8px',
   },
   titleRow: {
     display: 'flex',
     alignItems: 'center',
     gap: '8px',
+  },
+  headerRight: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    flexWrap: 'wrap',
   },
   pulse: {
     width: '8px',
